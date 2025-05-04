@@ -9,16 +9,31 @@ import Button from "@/app/components/common/Button";
 export default function Home() {
     const [file, setFile] = useState<File|null>(null);
     const [result, setResult] = useState<string|null>(null);
+    const [loading, setLoading] = useState<boolean>(false);
 
     const uploader = useRef<HTMLInputElement>(null);
 
     async function removeBackground() {
         if (!file) return;
 
+        setResult(null);
+        setLoading(true);
+
+        const formData = new FormData();
+        formData.append('file', file);
+
         const response = await fetch("/api/remove", {
             method: "POST",
-            body: file
+            body: formData
         });
+
+        setLoading(false);
+
+        if (!response.ok) {
+            const error = await response.json();
+            console.error('Error:', error);
+            return;
+        }
 
         const data = await response.blob();
         const url = URL.createObjectURL(data);
@@ -31,7 +46,7 @@ export default function Home() {
             <Panel title="Upload" classes="w-full">
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-3">
-                        <Button onClick={() => uploader.current?.click()}><FontAwesomeIcon icon={faUpload} /> Choose File</Button>
+                        <Button disabled={loading} onClick={() => uploader.current?.click()}><FontAwesomeIcon icon={faUpload} /> Choose File</Button>
                         <div className="text-sm font-medium text-slate-500">{file ? file.name : "No File Chosen"}</div>
 
                         <input ref={uploader} type="file" className="hidden" onChange={(e: any) => setFile(e.target.files[0])} />
@@ -45,7 +60,7 @@ export default function Home() {
                 <div className="rounded-md aspect-square overflow-hidden relative">
                     {
                     result ? <img src={result} alt="Result" className="w-full h-full object-cover" />
-                    : file ? <Button classes="absolute inset-0 w-fit h-fit m-auto" onClick={removeBackground}>Remove Background</Button>
+                    : file || loading ? <Button classes="absolute inset-0 w-fit h-fit m-auto" loading={loading} onClick={removeBackground}>Remove Background</Button>
                     : <div className="absolute inset-0 w-fit h-fit m-auto select-none text-slate-400/75">Result will appear here</div>}
                 </div>
             </Panel>
